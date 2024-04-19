@@ -14,6 +14,7 @@ import (
 	"path"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -654,6 +655,22 @@ func createProject(
 	}
 	if err == nil {
 		projectID = resp.ID
+		projModelResp, _, err := projectsWrapper.GetByID(projectID) // should return 403 if the project is not yet assigned to the application
+
+		maxSeconds := wrappers.MaxPollingSeconds
+		delaySeconds := wrappers.DelayPollingSeconds
+		pollingCounter := 0
+		for err != nil || !slices.Contains(projModelResp.ApplicationIds, applicationID[0]) {
+			if pollingCounter > maxSeconds {
+				logger.PrintfIfVerbose("Project %v is not assigned to application ID %v after %d seconds, aborting", projectID, applicationID[0], maxSeconds)
+				return "", err
+			}
+			logger.PrintfIfVerbose("Project %v is not yet assigned to the application %v, polling", projectID, applicationID[0])
+			time.Sleep(time.Duration(delaySeconds) * time.Second)
+			projModelResp, _, err = projectsWrapper.GetByID(projectID)
+			pollingCounter += delaySeconds
+		}
+
 		err = assignGroupsToProject(projectID, projectName, groupsMap, accessManagementWrapper)
 	}
 	return projectID, err

@@ -4,6 +4,11 @@ import (
 	"time"
 )
 
+const (
+	MaxPollingSeconds   = 300
+	DelayPollingSeconds = 5
+)
+
 type Project struct {
 	Name           string            `json:"name,omitempty"`
 	RepoURL        string            `json:"repoUrl,omitempty"`
